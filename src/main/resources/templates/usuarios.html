@@ -59,7 +59,7 @@
       <div class="role-title">Proveedor</div>
       <div class="role-body">
         <ul class="user-list" id="list-prov">
-          <li th:each="u : ${porRol['PROVEEDORES']}" class="user-item">
+          <li th:each="u : ${porRol['PROVEEDOR']}" class="user-item">
             <div>
               <strong th:text="${u.nombreUsuario}"> </strong><br>
               <small th:text="${u.codigo}"> </small>
@@ -100,7 +100,7 @@
         <select id="rol" name="rol" required autocomplete="off">
           <option value="ADMINISTRADOR">ADMINISTRADOR</option>
           <option value="PUBLICADOR">PUBLICADOR</option>
-          <option value="PROVEEDORES">PROVEEDORES</option>
+          <option value="PROVEEDOR">PROVEEDOR</option>
         </select>
       </label>
 

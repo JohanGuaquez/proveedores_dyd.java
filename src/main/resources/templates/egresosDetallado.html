@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8" />
+  <title>Detalle de egreso</title>
+</head>
+<body>
+
+  <h2>Detalle del egreso</h2>
+  <p>
+    <strong>Docto egreso:</strong>
+    <span th:text="${doctoEgreso}"></span>
+  </p>
+
+  <a th:href="@{/egresos}">Volver</a>
+
+  <table border="1">
+    <thead>
+      <tr>
+        <th>Docto causación</th>
+        <th>Docto egreso</th>
+        <th>Fecha</th>
+        <th>Tercero</th>
+        <th>Valor</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr th:each="item : ${detalles}">
+        <td th:text="${item.doctoCausacion}"></td>
+        <td th:text="${item.doctoEgreso}"></td>
+        <td th:text="${item.fecha}"></td>
+        <td th:text="${item.tercero}"></td>
+        <td th:text="${item.valor}"></td>
+      </tr>
+
+      <tr th:if="${#lists.isEmpty(detalles)}">
+        <td colspan="5">No se encontraron doctos de causación relacionados.</td>
+      </tr>
+    </tbody>
+  </table>
+
+</body>
+</html>
