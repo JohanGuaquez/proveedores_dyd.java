@@ -9,29 +9,73 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import co.dulcesydulces.provedor_backend.domain.dto.EgresoCreateRequest;
+import co.dulcesydulces.provedor_backend.domain.dto.EgresoPlanoResumen;
 import co.dulcesydulces.provedor_backend.domain.entidades.Egreso;
+import co.dulcesydulces.provedor_backend.domain.entidades.FacturaPlano;
+import co.dulcesydulces.provedor_backend.repository.EgresoPlanoRepository;
 import co.dulcesydulces.provedor_backend.repository.EgresoRepository;
+import co.dulcesydulces.provedor_backend.repository.FacturaPlanoRepository;
 
 @Service
 public class EgresoService {
 
-    private final EgresoRepository repo;
+    private final EgresoRepository egresoRepository;
+    private final EgresoPlanoRepository egresoPlanoRepository;
+    private final FacturaPlanoRepository facturaPlanoRepository;
     private final Path baseDir = Paths.get("uploads", "egresos");
 
-    public EgresoService(EgresoRepository repo) {
-        this.repo = repo;
+    public EgresoService(
+            EgresoRepository egresoRepository,
+            EgresoPlanoRepository egresoPlanoRepository,
+            FacturaPlanoRepository facturaPlanoRepository
+    ) {
+        this.egresoRepository = egresoRepository;
+        this.egresoPlanoRepository = egresoPlanoRepository;
+        this.facturaPlanoRepository = facturaPlanoRepository;
     }
 
-    public List<Egreso> buscar(String proveedor, String numeroEgreso, LocalDate fechaDocumento) {
-        return repo.buscar(proveedor, numeroEgreso, fechaDocumento);
+    public List<EgresoPlanoResumen> buscarPlanoSegunUsuario(
+            Authentication auth,
+            String proveedor,
+            String numeroEgreso,
+            LocalDate fechaDocumento
+    ) {
+        boolean esAdmin = auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ADMINISTRADOR"));
+
+        boolean esPublicador = auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("PUBLICADOR"));
+
+        boolean esProveedor = auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("PROVEEDOR"));
+
+        if (esAdmin || esPublicador) {
+            return egresoPlanoRepository.buscarConFiltros(proveedor, numeroEgreso, fechaDocumento);
+        }
+
+        if (esProveedor) {
+            String usuarioLogueado = auth.getName();
+            return egresoPlanoRepository.buscarPorTerceroYFiltros(
+                    usuarioLogueado,
+                    numeroEgreso,
+                    fechaDocumento
+            );
+        }
+
+        return List.of();
+    }
+
+    public List<FacturaPlano> buscarFacturasPorDoctoEgreso(String doctoEgreso) {
+        return facturaPlanoRepository.buscarPorDoctoEgreso(doctoEgreso);
     }
 
     public Egreso crear(EgresoCreateRequest req, MultipartFile soporte) {
-        if (repo.existsById(req.getNumeroEgreso())) {
+        if (egresoRepository.existsById(req.getNumeroEgreso())) {
             throw new RuntimeException("Ya existe el egreso: " + req.getNumeroEgreso());
         }
 
@@ -46,7 +90,12 @@ public class EgresoService {
             e.setRutaDocumento(guardarSoporte(req.getNumeroEgreso(), soporte));
         }
 
-        return repo.save(e);
+        return egresoRepository.save(e);
+    }
+
+    public Egreso obtenerPorNumero(String numeroEgreso) {
+        return egresoRepository.findById(numeroEgreso)
+                .orElseThrow(() -> new RuntimeException("No existe el egreso: " + numeroEgreso));
     }
 
     private String guardarSoporte(String numeroEgreso, MultipartFile file) {

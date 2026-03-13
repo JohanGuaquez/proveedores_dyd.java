@@ -17,8 +17,9 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import co.dulcesydulces.provedor_backend.domain.dto.EgresoCreateRequest;
-import co.dulcesydulces.provedor_backend.domain.entidades.Egreso;
+import co.dulcesydulces.provedor_backend.domain.dto.EgresoPlanoResumen;
 import co.dulcesydulces.provedor_backend.service.EgresoService;
+import co.dulcesydulces.provedor_backend.service.ProveedoresService;
 import jakarta.validation.Valid;
 
 @Controller
@@ -26,39 +27,60 @@ import jakarta.validation.Valid;
 public class EgresoPageController {
 
     private final EgresoService service;
+    private final ProveedoresService proveedoresService;
 
-    public EgresoPageController(EgresoService service) {
+    public EgresoPageController(EgresoService service, ProveedoresService proveedoresService) {
         this.service = service;
+        this.proveedoresService = proveedoresService;
     }
 
     @GetMapping
     public String page(
-        @RequestParam(required = false) String proveedor,
-        @RequestParam(required = false) String numeroEgreso,
-        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaDocumento,
-        Model model,
-        Authentication auth
+            @RequestParam(required = false) String proveedor,
+            @RequestParam(required = false) String numeroEgreso,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaDocumento,
+            Model model,
+            Authentication auth
     ) {
-        // (opcional) validar auth/roles aquí
-        List<Egreso> egresos = service.buscar(proveedor, numeroEgreso, fechaDocumento);
+        List<EgresoPlanoResumen> detalle = service.buscarPlanoSegunUsuario(auth, proveedor, numeroEgreso, fechaDocumento);
 
-        model.addAttribute("egresos", egresos);
+        boolean esAdmin = auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ADMINISTRADOR"));
+
+        boolean esPublicador = auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("PUBLICADOR"));
+
+        boolean puedeFiltrarProveedor = esAdmin || esPublicador;
+        boolean puedeCrearEgreso = esAdmin || esPublicador;
+
+        model.addAttribute("detalle", detalle);
         model.addAttribute("proveedor", proveedor);
         model.addAttribute("numeroEgreso", numeroEgreso);
         model.addAttribute("fechaDocumento", fechaDocumento);
+        model.addAttribute("puedeFiltrarProveedor", puedeFiltrarProveedor);
+        model.addAttribute("puedeCrearEgreso", puedeCrearEgreso);
 
-        // para el modal
+        model.addAttribute("proveedoresOptions", proveedoresService.getListaEnOptions());
         model.addAttribute("nuevoEgreso", new EgresoCreateRequest());
 
         return "egresos";
     }
+    @GetMapping("/detallado")
+public String verDetalleEgreso(
+        @RequestParam("doctoEgreso") String doctoEgreso,
+        Model model
+) {
+    model.addAttribute("doctoEgreso", doctoEgreso);
+    model.addAttribute("detalles", service.buscarFacturasPorDoctoEgreso(doctoEgreso));
+    return "egresosDetallado";
+}
 
     @PostMapping
     public String crear(
-        @Valid @ModelAttribute("nuevoEgreso") EgresoCreateRequest req,
-        BindingResult br,
-        @RequestParam(name = "soporte", required = false) MultipartFile soporte,
-        RedirectAttributes ra
+            @Valid @ModelAttribute("nuevoEgreso") EgresoCreateRequest req,
+            BindingResult br,
+            @RequestParam(name = "soporte", required = false) MultipartFile soporte,
+            RedirectAttributes ra
     ) {
         if (br.hasErrors()) {
             ra.addFlashAttribute("error", "Datos inválidos, revisa el formulario.");

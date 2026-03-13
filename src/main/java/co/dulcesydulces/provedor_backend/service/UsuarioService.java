@@ -33,7 +33,7 @@ public class UsuarioService {
         map.put("ADMINISTRADOR", new ArrayList<>());
         map.put("PUBLICADOR", new ArrayList<>());
         map.put("ESTANDAR", new ArrayList<>());
-        map.put("PROVEEDORES", new ArrayList<>());
+        map.put("PROVEEDOR", new ArrayList<>());
 
         for (Usuarios u : listar()) {
             String r = normalizarRol(u.getRol());
@@ -88,7 +88,7 @@ public class UsuarioService {
 
         if (r.equals("ADMINISTRADOR")) return "ADMINISTRADOR";
         if (r.equals("PUBLICADOR")) return "PUBLICADOR";
-        if (r.equals("PROVEEDORES")) return "PROVEEDORES";
+        if (r.equals("PROVEEDOR")) return "PROVEEDOR";
         if (r.equals("ESTANDAR") || r.equals("ESTANDAR DE USUARIO")) return "ESTANDAR";
         return "ESTANDAR";
     }
